@@ -34,6 +34,12 @@ aj ke din ka
     <td><img src="test/goldens/06_budgets_dark.png" width="200" alt="Budgets, dark"></td>
     <td><img src="test/goldens/07_more_dark.png" width="200" alt="More, dark"></td>
   </tr>
+  <tr>
+    <td><img src="test/goldens/09_balance_hidden_light.png" width="200" alt="Balances hidden"></td>
+    <td><img src="test/goldens/10_lock_light.png" width="200" alt="Fingerprint lock"></td>
+    <td><img src="test/goldens/02_chat_empty_light.png" width="200" alt="Empty chat"></td>
+    <td><img src="test/goldens/00_login_light.png" width="200" alt="Sign in"></td>
+  </tr>
 </table>
 
 <details>
@@ -61,6 +67,11 @@ aj ke din ka
   get close or go over.
 - **Categories** for income and expense, with icons, colours and chat keywords.
 - **Export** a PDF report or a CSV (opens in Excel) for any period.
+- **Fingerprint lock** (optional, in *More → Security*). Ledgr asks for your
+  fingerprint when it opens; your phone's PIN or pattern works as a backup.
+- **Hide balances** with the eye button on the dashboard. Balance, income,
+  expense and wallet amounts turn into `Rs ••••`, and Ledgr remembers your
+  choice.
 - **Google sign-in** with offline-first cloud sync, or **continue as guest**
   and keep everything on the phone.
 - Light and dark theme.

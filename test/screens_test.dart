@@ -18,6 +18,7 @@ import 'package:ledgr/data/repositories/transaction_repository.dart';
 import 'package:ledgr/data/repositories/wallet_repository.dart';
 import 'package:ledgr/features/settings/settings_screen.dart';
 import 'package:ledgr/providers/providers.dart';
+import 'package:ledgr/services/app_lock_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -114,7 +115,7 @@ void main() {
   /// [navBar] is the height of Android's system navigation bar in dp
   /// (48 for the 3-button bar), which the app draws behind edge-to-edge.
   Future<void> pumpApp(WidgetTester tester,
-      {double height = 852, double navBar = 0}) async {
+      {double height = 852, double navBar = 0, AppLockService? lock}) async {
     tester.view.physicalSize = Size(390 * 3, height * 3);
     tester.view.devicePixelRatio = 3;
     tester.view.padding = FakeViewPadding(bottom: navBar * 3);
@@ -124,6 +125,7 @@ void main() {
       overrides: [
         prefsProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(db),
+        if (lock != null) appLockServiceProvider.overrideWithValue(lock),
       ],
       child: const LedgrApp(),
     ));
@@ -260,6 +262,82 @@ void main() {
     expect(await budgetOf('exp_food'), isNull);
   });
 
+  testWidgets('eye button hides balances and remembers it', (tester) async {
+    await tester.runAsync(() => boot({'auth_mode': 'guest'}));
+    await pumpApp(tester);
+    expect(find.text('Rs ••••'), findsNothing);
+
+    await tester.tap(find.byTooltip('Hide balance'));
+    await settle(tester);
+    // Balance, income, expense, Cash and Bank.
+    expect(find.text('Rs ••••'), findsNWidgets(5));
+    expect(find.textContaining('Net this month: Rs ••••'), findsOneWidget);
+    expect(prefs.getBool('hide_balance'), isTrue);
+    await shot(tester, '09_balance_hidden_light');
+
+    // Still hidden after the app restarts.
+    await tester.pumpWidget(const SizedBox());
+    await pumpApp(tester);
+    expect(find.text('Rs ••••'), findsNWidgets(5));
+
+    await tester.tap(find.byTooltip('Show balance'));
+    await settle(tester);
+    expect(find.text('Rs ••••'), findsNothing);
+    expect(prefs.getBool('hide_balance'), isFalse);
+  });
+
+  testWidgets('fingerprint lock guards the app on open', (tester) async {
+    final lock = _FakeLock(pass: false);
+    await tester.runAsync(() => boot({'auth_mode': 'guest', 'app_lock': true}));
+    await pumpApp(tester, lock: lock);
+
+    // Asked right away; closing the prompt leaves the app locked.
+    expect(lock.prompts, 1);
+    expect(find.text('Ledgr is locked'), findsOneWidget);
+    expect(find.text('Current balance'), findsNothing);
+    await shot(tester, '10_lock_light');
+
+    lock.message = 'Not recognised';
+    await tester.tap(find.text('Unlock'));
+    await settle(tester);
+    expect(find.text('Not recognised'), findsOneWidget);
+    expect(find.text('Current balance'), findsNothing);
+
+    lock.pass = true;
+    await tester.tap(find.text('Unlock'));
+    await settle(tester);
+    expect(find.text('Current balance'), findsOneWidget);
+    expect(lock.prompts, 3);
+  });
+
+  testWidgets('turning the lock on needs a fingerprint and keeps you in',
+      (tester) async {
+    final lock = _FakeLock();
+    await tester.runAsync(() => boot({'auth_mode': 'guest'}));
+    await pumpApp(tester, lock: lock);
+    await tester.tap(find.text('More'));
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('Fingerprint lock').hitTestable(), 200,
+        scrollable: find
+            .descendant(
+                of: find.byType(SettingsScreen),
+                matching: find.byType(Scrollable))
+            .first);
+
+    await tester.tap(find.text('Fingerprint lock'));
+    await settle(tester);
+    expect(lock.prompts, 1);
+    expect(prefs.getBool('app_lock'), isTrue);
+    expect(find.text('Fingerprint lock is on'), findsOneWidget);
+    expect(find.text('Ledgr is locked'), findsNothing);
+
+    // A failed check leaves it on.
+    lock.pass = false;
+    await tester.tap(find.text('Fingerprint lock'));
+    await settle(tester);
+    expect(prefs.getBool('app_lock'), isTrue);
+  });
+
   testWidgets('sheet buttons stay above the 3-button nav bar', (tester) async {
     await tester.runAsync(() => boot({'auth_mode': 'guest'}));
     await pumpApp(tester, navBar: 48);
@@ -290,7 +368,7 @@ void main() {
 
     await tester.tap(find.text('More'));
     await settle(tester);
-    await tester.scrollUntilVisible(find.text('Wallets'), 200,
+    await tester.scrollUntilVisible(find.text('Wallets').hitTestable(), 200,
         scrollable: find
             .descendant(
                 of: find.byType(SettingsScreen),
@@ -312,6 +390,23 @@ void main() {
     await settle(tester);
     await expectButtonVisible('Add category');
   });
+}
+
+class _FakeLock implements AppLockService {
+  _FakeLock({this.pass = true});
+
+  bool pass;
+  String? message;
+  int prompts = 0;
+
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<({bool ok, String? message})> authenticate(String reason) async {
+    prompts++;
+    return (ok: pass, message: pass ? null : message);
+  }
 }
 
 /// Lets real DB futures complete between frames.

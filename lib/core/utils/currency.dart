@@ -38,6 +38,9 @@ class Currency {
     return amount < 0 ? '-$s' : s;
   }
 
+  /// `Rs ••••`, shown instead of an amount while balances are hidden.
+  String get hidden => _join('••••');
+
   /// `+Rs 1,250` / `-Rs 1,250`
   String signed(double amount, {bool compact = false}) {
     final s = format(amount.abs(), compact: compact);

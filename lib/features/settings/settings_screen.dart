@@ -98,6 +98,12 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 22),
+          const _Group('Security'),
+          const AppCard(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: _AppLockTile(),
+          ),
+          const SizedBox(height: 22),
           const _Group('Manage'),
           AppCard(
             padding: const EdgeInsets.symmetric(vertical: 6),
@@ -250,6 +256,49 @@ class SettingsScreen extends ConsumerWidget {
     if (picked != null) {
       ref.read(settingsProvider.notifier).setDefaultWallet(picked);
     }
+  }
+}
+
+/// Turning the lock on or off needs a fingerprint first, so a phone left
+/// unlocked can't be used to switch it off.
+class _AppLockTile extends ConsumerWidget {
+  const _AppLockTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(settingsProvider.select((s) => s.appLock));
+    final available = ref.watch(appLockAvailableProvider).value ?? false;
+
+    Future<void> toggle(bool v) async {
+      // Without a screen lock there is nothing to verify with; let it go off.
+      final result = !available
+          ? (ok: true, message: null)
+          : await ref.read(appLockServiceProvider).authenticate(
+              v ? 'Confirm to turn on fingerprint lock'
+                : 'Confirm to turn off fingerprint lock');
+      if (result.ok) {
+        // Already verified, so don't lock the screen the user is on.
+        if (v) ref.read(appUnlockedProvider.notifier).unlock();
+        ref.read(settingsProvider.notifier).setAppLock(v);
+        if (context.mounted) {
+          showSnack(context,
+              v ? 'Fingerprint lock is on' : 'Fingerprint lock is off');
+        }
+      } else if (result.message != null && context.mounted) {
+        showSnack(context, result.message!);
+      }
+    }
+
+    return SwitchListTile(
+      secondary: const Icon(Icons.fingerprint_rounded),
+      title: const Text('Fingerprint lock'),
+      subtitle: Text(available || on
+          ? 'Ask for your fingerprint when ${AppConfig.appName} opens'
+          : 'Set up a fingerprint or screen lock on your phone first'),
+      value: on,
+      // Always allow switching it off, even if the phone lost its screen lock.
+      onChanged: available || on ? toggle : null,
+    );
   }
 }
 

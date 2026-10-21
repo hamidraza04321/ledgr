@@ -6,6 +6,7 @@ import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/home_shell.dart';
+import 'features/lock/lock_screen.dart';
 import 'providers/providers.dart';
 
 class LedgrApp extends ConsumerWidget {
@@ -16,6 +17,8 @@ class LedgrApp extends ConsumerWidget {
     ref.watch(syncBootstrapProvider);
     final themeMode = ref.watch(settingsProvider.select((s) => s.themeMode));
     final signedOut = ref.watch(authProvider.select((a) => a.mode)) == AuthMode.none;
+    final locked = ref.watch(settingsProvider.select((s) => s.appLock)) &&
+        !ref.watch(appUnlockedProvider);
 
     return MaterialApp(
       title: AppConfig.appName,
@@ -40,7 +43,9 @@ class LedgrApp extends ConsumerWidget {
         duration: const Duration(milliseconds: 350),
         child: signedOut
             ? const LoginScreen(key: ValueKey('login'))
-            : const HomeShell(key: ValueKey('home')),
+            : locked
+                ? const LockScreen(key: ValueKey('lock'))
+                : const HomeShell(key: ValueKey('home')),
       ),
     );
   }

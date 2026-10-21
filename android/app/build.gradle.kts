@@ -47,3 +47,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Theme.AppCompat for styles.xml: the fingerprint dialog crashes on
+    // Android 8 and below without an AppCompat activity theme.
+    implementation("androidx.appcompat:appcompat:1.7.1")
+}

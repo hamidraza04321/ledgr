@@ -11,6 +11,7 @@ import '../data/repositories/category_repository.dart';
 import '../data/repositories/chat_repository.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/repositories/wallet_repository.dart';
+import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/parser/ai_parser.dart';
@@ -46,6 +47,12 @@ final entryParserProvider = Provider((ref) => EntryParser(
       ai: ref.watch(firebaseReadyProvider) ? AiParser() : null,
     ));
 
+final appLockServiceProvider = Provider((_) => AppLockService());
+
+/// Whether the phone can do the fingerprint lock (it needs some screen lock).
+final appLockAvailableProvider = FutureProvider<bool>(
+    (ref) => ref.watch(appLockServiceProvider).isAvailable());
+
 final authServiceProvider = Provider(
     (ref) => AuthService(firebaseReady: ref.watch(firebaseReadyProvider)));
 
@@ -74,24 +81,32 @@ class AppSettings {
     required this.currency,
     required this.aiEnabled,
     required this.defaultWalletId,
+    required this.appLock,
+    required this.hideBalance,
   });
 
   final ThemeMode themeMode;
   final Currency currency;
   final bool aiEnabled;
   final String defaultWalletId;
+  final bool appLock;
+  final bool hideBalance;
 
   AppSettings copyWith({
     ThemeMode? themeMode,
     Currency? currency,
     bool? aiEnabled,
     String? defaultWalletId,
+    bool? appLock,
+    bool? hideBalance,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
         currency: currency ?? this.currency,
         aiEnabled: aiEnabled ?? this.aiEnabled,
         defaultWalletId: defaultWalletId ?? this.defaultWalletId,
+        appLock: appLock ?? this.appLock,
+        hideBalance: hideBalance ?? this.hideBalance,
       );
 }
 
@@ -109,6 +124,8 @@ class SettingsNotifier extends Notifier<AppSettings> {
       currency: Currency.byCode(p.getString('currency')),
       aiEnabled: p.getBool('ai_enabled') ?? true,
       defaultWalletId: p.getString('default_wallet') ?? kCashWalletId,
+      appLock: p.getBool('app_lock') ?? false,
+      hideBalance: p.getBool('hide_balance') ?? false,
     );
   }
 
@@ -131,12 +148,34 @@ class SettingsNotifier extends Notifier<AppSettings> {
     _prefs.setString('default_wallet', id);
     state = state.copyWith(defaultWalletId: id);
   }
+
+  void setAppLock(bool v) {
+    _prefs.setBool('app_lock', v);
+    state = state.copyWith(appLock: v);
+  }
+
+  void setHideBalance(bool v) {
+    _prefs.setBool('hide_balance', v);
+    state = state.copyWith(hideBalance: v);
+  }
 }
 
 final settingsProvider =
     NotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
 
 final currencyProvider = Provider((ref) => ref.watch(settingsProvider).currency);
+
+/// False until the fingerprint check passes; resets only when the app
+/// process restarts, so the lock is asked for once per app open.
+class AppUnlockedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void unlock() => state = true;
+}
+
+final appUnlockedProvider =
+    NotifierProvider<AppUnlockedNotifier, bool>(AppUnlockedNotifier.new);
 
 // ---------------------------------------------------------------------------
 // Auth

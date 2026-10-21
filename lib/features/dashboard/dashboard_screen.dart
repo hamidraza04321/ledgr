@@ -158,12 +158,13 @@ class _BalanceCard extends ConsumerWidget {
     final balance = ref.watch(totalBalanceProvider);
     final totals = ref.watch(periodTotalsProvider).value;
     final period = ref.watch(periodProvider);
+    final hide = ref.watch(settingsProvider.select((s) => s.hideBalance));
     final palette = context.palette;
     const white = Colors.white;
     final soft = white.withValues(alpha: 0.75);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: LinearGradient(
@@ -186,16 +187,30 @@ class _BalanceCard extends ConsumerWidget {
             children: [
               Text('Current balance',
                   style: context.text.bodyMedium?.copyWith(color: soft)),
+              IconButton(
+                tooltip: hide ? 'Show balance' : 'Hide balance',
+                visualDensity: VisualDensity.compact,
+                onPressed: () =>
+                    ref.read(settingsProvider.notifier).setHideBalance(!hide),
+                icon: Icon(
+                  hide ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: soft,
+                  size: 20,
+                ),
+              ),
               const Spacer(),
               Icon(Icons.account_balance_wallet_rounded, color: soft, size: 20),
             ],
           ),
-          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              balance == null ? '—' : currency.format(balance),
+              balance == null
+                  ? '—'
+                  : hide
+                      ? currency.hidden
+                      : currency.format(balance),
               style: context.text.displaySmall?.copyWith(
                 color: white,
                 fontWeight: FontWeight.w800,
@@ -205,7 +220,8 @@ class _BalanceCard extends ConsumerWidget {
           if (totals != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Net ${period.phrase}: ${currency.signed(totals.net)}',
+              'Net ${period.phrase}: '
+              '${hide ? currency.hidden : currency.signed(totals.net)}',
               style: context.text.bodySmall?.copyWith(color: soft),
             ),
           ],
@@ -216,7 +232,9 @@ class _BalanceCard extends ConsumerWidget {
                 child: _FlowTile(
                   icon: Icons.south_west_rounded,
                   label: 'Income',
-                  value: currency.format(totals?.income ?? 0, compact: true),
+                  value: hide
+                      ? currency.hidden
+                      : currency.format(totals?.income ?? 0, compact: true),
                 ),
               ),
               const SizedBox(width: 12),
@@ -224,7 +242,9 @@ class _BalanceCard extends ConsumerWidget {
                 child: _FlowTile(
                   icon: Icons.north_east_rounded,
                   label: 'Expense',
-                  value: currency.format(totals?.expense ?? 0, compact: true),
+                  value: hide
+                      ? currency.hidden
+                      : currency.format(totals?.expense ?? 0, compact: true),
                 ),
               ),
             ],
@@ -297,6 +317,7 @@ class _WalletStrip extends ConsumerWidget {
     final wallets = ref.watch(walletsProvider).value ?? const [];
     final balances = ref.watch(walletBalancesProvider).value ?? const {};
     final currency = ref.watch(currencyProvider);
+    final hide = ref.watch(settingsProvider.select((s) => s.hideBalance));
 
     void openWallets() => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => const WalletsScreen()));
@@ -337,7 +358,9 @@ class _WalletStrip extends ConsumerWidget {
                                 style: context.text.labelMedium?.copyWith(
                                     color: context.colors.onSurfaceVariant)),
                             Text(
-                              currency.format(balances[w.id] ?? 0),
+                              hide
+                                  ? currency.hidden
+                                  : currency.format(balances[w.id] ?? 0),
                               style: context.text.titleSmall,
                             ),
                           ],
