@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "390720874868",
+    "project_id": "ledgr-f2019",
+    "storage_bucket": "ledgr-f2019.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:390720874868:android:440d956119005db9a62421",
+        "android_client_info": {
+          "package_name": "com.ledgrapp.ledgr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "390720874868-fp0vcbrqdi80dh68u8u0fh6pfjl815lp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ledgrapp.ledgr",
+            "certificate_hash": "7f3ca0f64a26192c53c457f768dd52dd73c44e11"
+          }
+        },
+        {
+          "client_id": "390720874868-4qp29h87od62lc78trknq82765tmn5b9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6HBsMM-eJweFYu94FZ_WblRNb7M6yUck"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "390720874868-4qp29h87od62lc78trknq82765tmn5b9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
